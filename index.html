@@ -350,13 +350,6 @@
             button {
                 padding: 14px 40px;
                 font-size: 1.2rem;
-                position: relative !important;
-                left: auto !important;
-                top: auto !important;
-            }
-
-            .btn-no {
-                position: relative !important;
             }
 
             .success-text {
@@ -425,13 +418,6 @@
                 padding: 12px 25px;
                 font-size: 1rem;
                 width: 100%;
-                position: relative !important;
-                left: auto !important;
-                top: auto !important;
-            }
-
-            .btn-no {
-                position: relative !important;
             }
 
             .success-text {
@@ -490,7 +476,7 @@
 
         <div class="buttons">
             <button class="btn-yes" onclick="handleYesClick()">YES 💕</button>
-            <button class="btn-no" id="runaway-btn" onclick="handleNoClick()">NO</button>
+            <button class="btn-no" id="runaway-btn">NO</button>
         </div>
 
         <div id="success-message">
@@ -524,7 +510,6 @@
     <script>
         /* --- JAVASCRIPT LOGIC --- */
         
-        let noClickCount = 0;
         let yesClickCount = 0;
         const noBtn = document.getElementById('runaway-btn');
         const yesBtn = document.querySelector('.btn-yes');
@@ -572,7 +557,7 @@
             btn.style.zIndex = '20';
         }
 
-        // YES Button hover - runs away 3 times
+        // YES Button - handle both hover and touch
         yesBtn.addEventListener('mouseover', function(e) {
             if (yesClickCount < 3) {
                 yesClickCount++;
@@ -590,22 +575,49 @@
             }
         });
 
-        // NO Button hover - runs away 3 times
-        noBtn.addEventListener('mouseover', function(e) {
-            if (noClickCount < 3) {
-                noClickCount++;
+        // Touch support for YES button on mobile
+        yesBtn.addEventListener('touchstart', function(e) {
+            if (yesClickCount < 3) {
+                yesClickCount++;
                 
-                // Create safe movement area (keep button 50px from edges)
                 const safeX = Math.random() * (window.innerWidth - 200) + 50;
                 const safeY = Math.random() * (window.innerHeight - 150) + 50;
                 
-                noBtn.style.position = 'fixed';
-                noBtn.style.left = safeX + 'px';
-                noBtn.style.top = safeY + 'px';
-                noBtn.style.zIndex = '20';
+                yesBtn.style.position = 'fixed';
+                yesBtn.style.left = safeX + 'px';
+                yesBtn.style.top = safeY + 'px';
+                yesBtn.style.zIndex = '20';
                 
                 e.preventDefault();
             }
+        });
+
+        // NO Button - handle both hover and touch (ALWAYS RUNS AWAY)
+        noBtn.addEventListener('mouseover', function(e) {
+            // NO button always runs away - no limit!
+            const safeX = Math.random() * (window.innerWidth - 200) + 50;
+            const safeY = Math.random() * (window.innerHeight - 150) + 50;
+            
+            noBtn.style.position = 'fixed';
+            noBtn.style.left = safeX + 'px';
+            noBtn.style.top = safeY + 'px';
+            noBtn.style.zIndex = '20';
+            
+            e.preventDefault();
+        });
+
+        // Touch support for NO button on mobile (ALWAYS RUNS AWAY)
+        noBtn.addEventListener('touchstart', function(e) {
+            // NO button always runs away - no limit!
+            const safeX = Math.random() * (window.innerWidth - 200) + 50;
+            const safeY = Math.random() * (window.innerHeight - 150) + 50;
+            
+            noBtn.style.position = 'fixed';
+            noBtn.style.left = safeX + 'px';
+            noBtn.style.top = safeY + 'px';
+            noBtn.style.zIndex = '20';
+            
+            e.preventDefault();
         });
 
         // Function to handle the Yes action
@@ -640,16 +652,6 @@
             if (yesClickCount >= 3) {
                 acceptLove();
             }
-            // Otherwise it will keep running away on hover
-        }
-
-        // Logic for clicking the No button
-        function handleNoClick() {
-            // After 3 attempts, show the success message
-            if (noClickCount >= 3) {
-                acceptLove();
-            }
-            // Otherwise it will keep running away on hover
         }
 
         // Handle date button clicks
