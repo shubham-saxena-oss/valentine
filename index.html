@@ -173,6 +173,8 @@
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
             position: relative;
             overflow: hidden;
+            max-width: 100vw;
+            max-height: 100vh;
         }
 
         button::before {
@@ -228,6 +230,8 @@
         #success-message {
             display: none;
             animation: fadeIn 0.6s ease;
+            overflow-y: auto;
+            max-height: calc(90vh - 200px);
         }
 
         @keyframes fadeIn {
@@ -256,6 +260,7 @@
             gap: 15px;
             margin: 20px 0;
             font-size: 3rem;
+            flex-wrap: wrap;
         }
 
         .heart-bounce {
@@ -303,11 +308,17 @@
             color: white;
             border-radius: 30px;
             transition: all 0.3s ease;
+            width: 100%;
         }
 
         .date-button:hover {
             transform: translateX(8px);
             box-shadow: 0 10px 30px rgba(255, 105, 180, 0.4);
+        }
+
+        .date-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         /* --- RESPONSIVE --- */
@@ -316,6 +327,7 @@
                 padding: 35px;
                 width: 95%;
                 border-radius: 30px;
+                margin: 20px;
             }
 
             h1 {
@@ -332,11 +344,19 @@
 
             .buttons {
                 gap: 15px;
+                flex-wrap: wrap;
             }
 
             button {
                 padding: 14px 40px;
                 font-size: 1.2rem;
+                position: relative !important;
+                left: auto !important;
+                top: auto !important;
+            }
+
+            .btn-no {
+                position: relative !important;
             }
 
             .success-text {
@@ -347,37 +367,108 @@
                 font-size: 2.5rem;
                 gap: 10px;
             }
+
+            .date-buttons {
+                gap: 10px;
+            }
+
+            .date-button {
+                padding: 12px 20px;
+                font-size: 1rem;
+            }
+
+            #success-message {
+                max-height: calc(85vh - 150px);
+            }
         }
 
         @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
             .container {
-                padding: 25px;
+                padding: 20px;
+                width: 100%;
+                border-radius: 20px;
+                margin: 0;
             }
 
             h1 {
-                font-size: 2.2rem;
+                font-size: 2rem;
+                margin: 8px 0;
             }
 
             .subtitle {
-                font-size: 1.2rem;
+                font-size: 1rem;
             }
 
             .img-container img {
-                width: 180px;
+                width: 160px;
+                border: 3px solid white;
+            }
+
+            .img-container::before {
+                top: -10px;
+                left: -10px;
+                right: -10px;
+                bottom: -10px;
             }
 
             .buttons {
                 flex-direction: column;
-                gap: 12px;
+                gap: 10px;
+                margin-top: 20px;
             }
 
             button {
-                padding: 12px 30px;
+                padding: 12px 25px;
                 font-size: 1rem;
+                width: 100%;
+                position: relative !important;
+                left: auto !important;
+                top: auto !important;
+            }
+
+            .btn-no {
+                position: relative !important;
+            }
+
+            .success-text {
+                font-size: 1.3rem;
+                margin: 15px 0;
+            }
+
+            .hearts-container {
+                font-size: 2rem;
+                gap: 8px;
+                margin: 15px 0;
+            }
+
+            .date-intro {
+                font-size: 1.1rem;
+                margin: 20px 0 8px 0;
+            }
+
+            .date-subtitle {
+                font-size: 0.85rem;
+                margin-bottom: 15px;
             }
 
             .date-buttons {
-                gap: 10px;
+                gap: 8px;
+                margin-top: 15px;
+            }
+
+            .date-button {
+                padding: 10px 15px;
+                font-size: 0.95rem;
+                width: 100%;
+            }
+
+            #success-message {
+                max-height: calc(90vh - 120px);
+                padding: 0;
             }
         }
     </style>
@@ -398,8 +489,8 @@
         </h1>
 
         <div class="buttons">
-            <button class="btn-yes" onclick="acceptLove()">YES 💕</button>
-            <button class="btn-no" id="runaway-btn" onmouseover="moveButton()" onclick="handleNoClick()">NO</button>
+            <button class="btn-yes" onclick="handleYesClick()">YES 💕</button>
+            <button class="btn-no" id="runaway-btn" onclick="handleNoClick()">NO</button>
         </div>
 
         <div id="success-message">
@@ -434,11 +525,14 @@
         /* --- JAVASCRIPT LOGIC --- */
         
         let noClickCount = 0;
+        let yesClickCount = 0;
         const noBtn = document.getElementById('runaway-btn');
+        const yesBtn = document.querySelector('.btn-yes');
         const questionText = document.getElementById('question-text');
         const mainImage = document.getElementById('main-image');
         const successMessage = document.getElementById('success-message');
         const buttonsContainer = document.querySelector('.buttons');
+        const container = document.getElementById('main-card');
 
         // Array of cute responses for date selection
         const dateResponses = [
@@ -447,8 +541,78 @@
             "🚗 The stars have nothing on you! ✨🌙"
         ];
 
+        // Safe button positioning - ensures button stays within viewport
+        function getRandomPosition() {
+            const padding = 60; // Distance from edges
+            const buttonWidth = 140;
+            const buttonHeight = 60;
+            
+            // Calculate safe boundaries
+            const minX = padding;
+            const maxX = window.innerWidth - buttonWidth - padding;
+            const minY = padding;
+            const maxY = window.innerHeight - buttonHeight - padding;
+            
+            // Ensure min is not greater than max
+            const x = minX + Math.random() * Math.max(0, maxX - minX);
+            const y = minY + Math.random() * Math.max(0, maxY - minY);
+            
+            return { x, y };
+        }
+
+        // Logic to make buttons run away
+        function moveButton(btn, clickCount, maxAttempts = 3) {
+            if (clickCount >= maxAttempts) return;
+
+            const pos = getRandomPosition();
+            
+            btn.style.position = 'fixed';
+            btn.style.left = `${Math.max(10, Math.min(pos.x, window.innerWidth - 140))}px`;
+            btn.style.top = `${Math.max(10, Math.min(pos.y, window.innerHeight - 60))}px`;
+            btn.style.zIndex = '20';
+        }
+
+        // YES Button hover - runs away 3 times
+        yesBtn.addEventListener('mouseover', function(e) {
+            if (yesClickCount < 3) {
+                yesClickCount++;
+                
+                // Create safe movement area (keep button 50px from edges)
+                const safeX = Math.random() * (window.innerWidth - 200) + 50;
+                const safeY = Math.random() * (window.innerHeight - 150) + 50;
+                
+                yesBtn.style.position = 'fixed';
+                yesBtn.style.left = safeX + 'px';
+                yesBtn.style.top = safeY + 'px';
+                yesBtn.style.zIndex = '20';
+                
+                e.preventDefault();
+            }
+        });
+
+        // NO Button hover - runs away 3 times
+        noBtn.addEventListener('mouseover', function(e) {
+            if (noClickCount < 3) {
+                noClickCount++;
+                
+                // Create safe movement area (keep button 50px from edges)
+                const safeX = Math.random() * (window.innerWidth - 200) + 50;
+                const safeY = Math.random() * (window.innerHeight - 150) + 50;
+                
+                noBtn.style.position = 'fixed';
+                noBtn.style.left = safeX + 'px';
+                noBtn.style.top = safeY + 'px';
+                noBtn.style.zIndex = '20';
+                
+                e.preventDefault();
+            }
+        });
+
         // Function to handle the Yes action
         function acceptLove() {
+            // Scroll to top to ensure visibility
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
             // Trigger Fireworks/Hearts
             triggerConfetti();
             
@@ -458,31 +622,34 @@
             
             // Show Success Message
             successMessage.style.display = 'block';
+            
+            // Reset button positions
+            yesBtn.style.position = 'static';
+            noBtn.style.position = 'static';
+            
+            // Adjust container for mobile
+            container.style.width = '95%';
+            container.style.maxWidth = '100%';
+            container.style.overflowY = 'auto';
+            container.style.maxHeight = '90vh';
         }
 
-        // Logic to make the button run away
-        function moveButton() {
-            // If user has tried 3 times, don't move anymore
-            if (noClickCount >= 3) return;
-
-            const x = Math.random() * (window.innerWidth - noBtn.offsetWidth);
-            const y = Math.random() * (window.innerHeight - noBtn.offsetHeight);
-            
-            noBtn.style.position = 'fixed';
-            noBtn.style.left = `${x}px`;
-            noBtn.style.top = `${y}px`;
-            noBtn.style.zIndex = '20';
+        // Logic for clicking the Yes button
+        function handleYesClick() {
+            // After 3 attempts, show the success message
+            if (yesClickCount >= 3) {
+                acceptLove();
+            }
+            // Otherwise it will keep running away on hover
         }
 
         // Logic for clicking the No button
         function handleNoClick() {
-            noClickCount++;
-
-            if (noClickCount < 3) {
-                moveButton();
-            } else {
+            // After 3 attempts, show the success message
+            if (noClickCount >= 3) {
                 acceptLove();
             }
+            // Otherwise it will keep running away on hover
         }
 
         // Handle date button clicks
@@ -504,6 +671,29 @@
             successMessage.appendChild(message);
 
             triggerConfetti();
+
+            // Scroll to ensure message is visible
+            setTimeout(() => {
+                message.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 300);
+
+            // After 3 seconds, redirect or show final message
+            setTimeout(() => {
+                // Change this to your redirect URL
+                // window.location.href = 'https://your-redirect-url.com';
+                
+                // For now, show a final message
+                const finalMsg = document.createElement('div');
+                finalMsg.style.cssText = `
+                    margin-top: 20px;
+                    font-size: 1.3rem;
+                    color: #ff1493;
+                    font-weight: 700;
+                    animation: fadeIn 0.6s ease;
+                `;
+                finalMsg.textContent = "You're the best! 💕";
+                successMessage.appendChild(finalMsg);
+            }, 3000);
         }
 
         // Fireworks Config (Heart Shower)
